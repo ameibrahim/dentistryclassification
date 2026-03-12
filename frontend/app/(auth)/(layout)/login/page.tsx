@@ -1,15 +1,39 @@
 "use client";
 
-import { useActionState } from "react";
-import { signInWithEmail } from "@/app/actions/auth/signin";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { IconAt, IconAsterisk, IconAlertTriangle } from "@tabler/icons-react";
+import { authClient } from "@/lib/auth/client";
 
 function LoginPage() {
-    const [state, formAction, isPending] = useActionState(
-        signInWithEmail,
-        null
-    );
+    const router = useRouter();
+    const [error, setError] = useState<string | null>(null);
+    const [isPending, setIsPending] = useState(false);
+
+    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        setError(null);
+        setIsPending(true);
+
+        const formData = new FormData(e.currentTarget);
+        const email = formData.get("email") as string;
+        const password = formData.get("password") as string;
+
+        const { error: signInError } = await authClient.signIn.email({
+            email,
+            password,
+        });
+
+        if (signInError) {
+            setError(signInError.message || "Failed to sign in. Try again.");
+            setIsPending(false);
+            return;
+        }
+
+        router.push("/doctor");
+        setIsPending(false);
+    }
 
     return (
         <div className="flex flex-col gap-6 w-[340px]">
@@ -23,14 +47,14 @@ function LoginPage() {
                 </p>
             </div>
 
-            {state?.error && (
+            {error && (
                 <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     <IconAlertTriangle size={18} className="shrink-0 mt-0.5" />
-                    <span>{state.error}</span>
+                    <span>{error}</span>
                 </div>
             )}
 
-            <form className="flex flex-col gap-4" action={formAction}>
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
                 <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">
                         Email
